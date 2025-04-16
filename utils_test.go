@@ -61,15 +61,16 @@ func TestGetPort(t *testing.T) {
 	tests := []struct {
 		name     string
 		host     string
-		expected string
+		expected int
 	}{
-		{"Valid port", "example.com:8080", "8080"},
-		{"Missing port", "example.com", ""},
-		{"Empty host", "", ""},
-		{"Localhost with port", "localhost:3000", "3000"},
-		{"IPv4 address with port", "192.168.1.1:5000", "5000"},
-		{"IPv6 address with port", "[2001:db8::1]:9090", "9090"},
-		{"IPv6 without port", "[2001:db8::1]", ""},
+		{"Valid port", "example.com:8080", 8080},
+		{"Missing port", "example.com", -1},
+		{"Empty host", "", -1},
+		{"Localhost with port", "localhost:3000", 3000},
+		{"Localhost with invalid port", "localhost:aaaa", -1},
+		{"IPv4 address with port", "192.168.1.1:5000", 5000},
+		{"IPv6 address with port", "[2001:db8::1]:9090", 9090},
+		{"IPv6 without port", "[2001:db8::1]", -1},
 	}
 
 	for _, tc := range tests {
@@ -162,4 +163,16 @@ func TestTruncatePointerValue(t *testing.T) {
 	notNilPointer := truncatePointerValue(SecCHUA, "some_value")
 	assert.NotNil(t, notNilPointer)
 	assert.Equal(t, "some_value", *notNilPointer)
+}
+
+func TestUseMetadata(t *testing.T) {
+	val1 := "Foo"
+	var val2 *string
+	result1 := useMetadata(val1, val2)
+	assert.Equal(t, "Foo", result1)
+
+	tmp := "Bar"
+	val2 = &tmp
+	result2 := useMetadata(val1, val2)
+	assert.Equal(t, "Bar", result2)
 }

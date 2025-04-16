@@ -72,7 +72,7 @@ func TestGetHeader_OnlyRequiredValues(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, c)
 
-	header, err := c.buildHeader(request)
+	header, err := c.buildHeader(request, &RequestMetadata{})
 
 	assert.Nil(t, err)
 
@@ -125,7 +125,7 @@ func TestGetHeader_WithOptionalValues(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, c)
 
-	header, err := c.buildHeader(request)
+	header, err := c.buildHeader(request, &RequestMetadata{})
 
 	assert.Nil(t, err)
 
@@ -166,6 +166,39 @@ func TestGetHeader_WithOptionalValues(t *testing.T) {
 	assert.Equal(t, "Pixel 3", *header.SecCHUAModel)
 	assert.NotNil(t, header.SecCHDeviceMemory)
 	assert.Equal(t, "8", *header.SecCHDeviceMemory)
+}
+
+func TestGetHeader_OverrideInitialValues(t *testing.T) {
+	request := setupRequest()
+	c, err := NewClient("your-fraud-api-key")
+
+	assert.Nil(t, err)
+	assert.NotNil(t, c)
+
+	accept := "application/xml"
+	acceptCharset := "utf16"
+	acceptEncoding := "en-US"
+	acceptLanguage := "en"
+	addr := "192.168.1.1"
+	proto := "grpc"
+	header, err := c.buildHeader(request, &RequestMetadata{
+		Accept:         &accept,
+		AcceptCharset:  &acceptCharset,
+		AcceptEncoding: &acceptEncoding,
+		AcceptLanguage: &acceptLanguage,
+		Addr:           &addr,
+		Protocol:       &proto,
+	})
+
+	assert.Nil(t, err)
+
+	// required fields
+	assert.Equal(t, "application/xml", header.Accept)
+	assert.Equal(t, "utf16", header.AcceptCharset)
+	assert.Equal(t, "en-US", header.AcceptEncoding)
+	assert.Equal(t, "en", header.AcceptLanguage)
+	assert.Equal(t, "192.168.1.1", header.Addr)
+	assert.Equal(t, "grpc", header.Protocol)
 }
 
 func TestGetModule(t *testing.T) {
@@ -223,6 +256,29 @@ func TestValidate(t *testing.T) {
 	assert.Equal(t, Allow, resp.Action)
 }
 
+func TestValidateWithRequestMetadata(t *testing.T) {
+	request := setupRequest()
+	c, err := NewClient("your-fraud-api-key")
+
+	assert.Nil(t, err)
+	assert.NotNil(t, c)
+
+	mockEvent := &MockEvent{
+		ValidateFunc: func(c *Client, r *http.Request, module *Module, header *Header) (*ResponsePayload, error) {
+			return &ResponsePayload{
+				SuccessResponsePayload: SuccessResponsePayload{
+					Action: Allow,
+				},
+			}, nil
+		},
+	}
+
+	resp, err := c.ValidateWithRequestMetadata(request, mockEvent, nil)
+	assert.Nil(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, Allow, resp.Action)
+}
+
 func TestCollect(t *testing.T) {
 	request := setupRequest()
 	c, err := NewClient("your-fraud-api-key")
@@ -240,16 +296,59 @@ func TestCollect(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestWithEndpoint(t *testing.T) {
-	endpoint := "api.example.org"
-	client, err := NewClient(
-		"your-api-key",
-		ClientWithEndpoint(endpoint),
-	)
+func TestCollectWithRequestMetadata(t *testing.T) {
+	request := setupRequest()
+	c, err := NewClient("your-fraud-api-key")
 
-	assert.NotNil(t, client)
 	assert.Nil(t, err)
-	assert.Equal(t, endpoint, client.Endpoint)
+	assert.NotNil(t, c)
+
+	mockEvent := &MockEvent{
+		CollectFunc: func(c *Client, r *http.Request, module *Module, header *Header) (*ErrorResponsePayload, error) {
+			return nil, nil
+		},
+	}
+
+	_, err = c.CollectWithRequestMetadata(request, mockEvent, nil)
+	assert.Nil(t, err)
+}
+
+func TestWithEndpoint(t *testing.T) {
+	t.Run("Instantiate without protocol", func(t *testing.T) {
+		endpoint := "api.example.org"
+		client, err := NewClient(
+			"your-api-key",
+			ClientWithEndpoint(endpoint),
+		)
+
+		assert.NotNil(t, client)
+		assert.Nil(t, err)
+		assert.Equal(t, "https://api.example.org", client.Endpoint)
+	})
+
+	t.Run("Instantiate with HTTP protocol", func(t *testing.T) {
+		endpoint := "http://api.example.org"
+		client, err := NewClient(
+			"your-api-key",
+			ClientWithEndpoint(endpoint),
+		)
+
+		assert.NotNil(t, client)
+		assert.Nil(t, err)
+		assert.Equal(t, "http://api.example.org", client.Endpoint)
+	})
+
+	t.Run("Instantiate with HTTPS protocol", func(t *testing.T) {
+		endpoint := "https://api.example.org"
+		client, err := NewClient(
+			"your-api-key",
+			ClientWithEndpoint(endpoint),
+		)
+
+		assert.NotNil(t, client)
+		assert.Nil(t, err)
+		assert.Equal(t, "https://api.example.org", client.Endpoint)
+	})
 }
 
 func TestWithTimeout(t *testing.T) {
@@ -282,7 +381,7 @@ func ExampleClientWithEndpoint() {
 	c, _ := NewClient("your-api-key", ClientWithEndpoint("account-api.example.org"))
 
 	fmt.Println(c.Endpoint)
-	// Output: account-api.example.org
+	// Output: https://account-api.example.org
 }
 
 func ExampleClientWithTimeout() {

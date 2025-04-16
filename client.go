@@ -9,7 +9,7 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"strconv"
+	"strings"
 	"time"
 )
 
@@ -60,6 +60,10 @@ func NewClient(fraudApiKey string, options ...ClientOption) (*Client, error) {
 		Timeout: time.Millisecond * time.Duration(c.Timeout),
 	}
 
+	if !strings.HasPrefix(c.Endpoint, "http://") && !strings.HasPrefix(c.Endpoint, "https://") {
+		c.Endpoint = fmt.Sprintf("https://%s", c.Endpoint)
+	}
+
 	return c, nil
 }
 
@@ -72,65 +76,73 @@ func (c *Client) getModule() *Module {
 	}
 }
 
-// buildHeader is used to construct the [Header] type based on the incoming request.
-// An error may be returned if the IP cannot be retrieved or if it failed to convert the port to an integer.
-func (c *Client) buildHeader(r *http.Request) (*Header, error) {
-	proto := getProtocol(r)
-
-	ip, err := getIP(r)
-	if err != nil {
-		return nil, fmt.Errorf("fail to parse request's IP: %w", err)
+// buildHeader is used to construct the [Header] type.
+// It constructs this payload by reading the [RequestMetadata] fields if specified.
+// It will extracts the information from the incoming request otherwise.
+//
+// An error may be returned if the IP cannot be retrieved.
+func (c *Client) buildHeader(r *http.Request, rm *RequestMetadata) (*Header, error) {
+	var proto string
+	if rm.Protocol != nil {
+		proto = *rm.Protocol
+	} else {
+		proto = getProtocol(r)
 	}
 
-	stringPort := getPort(r)
-	if stringPort == "" {
-		if proto == "https" {
-			stringPort = "443"
-		} else {
-			stringPort = "80"
+	var ip string
+	if rm.Addr != nil {
+		ip = *rm.Addr
+	} else {
+		userIp, err := getIP(r)
+		if err != nil {
+			return nil, fmt.Errorf("fail to parse request's IP: %w", err)
 		}
+		ip = userIp
 	}
-	port, err := strconv.Atoi(stringPort)
-	if err != nil {
-		return nil, fmt.Errorf("error when converting port to an integer: %w", err)
+
+	port := useMetadata(getPort(r), rm.Port)
+	if port == -1 {
+		if proto == "https" {
+			port = 443
+		} else {
+			port = 80
+		}
 	}
 
 	return &Header{
-		Accept:                 truncateValue(Accept, r.Header.Get("accept")),
-		AcceptCharset:          truncateValue(AcceptCharset, r.Header.Get("accept-charset")),
-		AcceptEncoding:         truncateValue(AcceptEncoding, r.Header.Get("accept-encoding")),
-		AcceptLanguage:         truncateValue(AcceptLanguage, r.Header.Get("accept-language")),
+		Accept:                 truncateValue(Accept, useMetadata(r.Header.Get("accept"), rm.Accept)),
+		AcceptCharset:          truncateValue(AcceptCharset, useMetadata(r.Header.Get("accept-charset"), rm.AcceptCharset)),
+		AcceptEncoding:         truncateValue(AcceptEncoding, useMetadata(r.Header.Get("accept-encoding"), rm.AcceptEncoding)),
+		AcceptLanguage:         truncateValue(AcceptLanguage, useMetadata(r.Header.Get("accept-language"), rm.AcceptLanguage)),
 		Addr:                   ip,
-		ClientID:               truncateValue(ClientID, getClientId(r)),
-		Connection:             truncateValue(Connection, r.Header.Get("connection")),
-		ContentType:            truncateValue(ContentType, r.Header.Get("content-type")),
-		From:                   truncateValue(From, r.Header.Get("from")),
-		Host:                   truncateValue(Host, r.Host),
+		ClientID:               truncateValue(ClientID, useMetadata(getClientId(r), rm.ClientID)),
+		Connection:             truncateValue(Connection, useMetadata(r.Header.Get("connection"), rm.Connection)),
+		ContentType:            truncateValue(ContentType, useMetadata(r.Header.Get("content-type"), rm.ContentType)),
+		From:                   truncateValue(From, useMetadata(r.Header.Get("from"), rm.From)),
+		Host:                   truncateValue(Host, useMetadata(r.Host, rm.Host)),
 		Method:                 r.Method,
-		Referer:                truncateValue(Referer, r.Header.Get("referer")),
-		Request:                truncateValue(Request, getURL(r)),
-		Origin:                 truncateValue(Origin, r.Header.Get("origin")),
+		Referer:                truncateValue(Referer, useMetadata(r.Header.Get("referer"), rm.Referer)),
+		Request:                truncateValue(Request, useMetadata(getURL(r), rm.Request)),
+		Origin:                 truncateValue(Origin, useMetadata(r.Header.Get("origin"), rm.Origin)),
 		Port:                   port,
 		Protocol:               proto,
-		SecCHUA:                truncatePointerValue(SecCHUA, r.Header.Get("sec-ch-ua")),
-		SecCHUAMobile:          truncatePointerValue(SecCHUAMobile, r.Header.Get("sec-ch-ua-mobile")),
-		SecCHUAPlatform:        truncatePointerValue(SecCHUAPlatform, r.Header.Get("sec-ch-ua-platform")),
-		SecCHUAArch:            truncatePointerValue(SecCHUAArch, r.Header.Get("sec-ch-ua-arch")),
-		SecCHUAFullVersionList: truncatePointerValue(SecCHUAFullVersionList, r.Header.Get("sec-ch-ua-full-version-list")),
-		SecCHUAModel:           truncatePointerValue(SecCHUAModel, r.Header.Get("sec-ch-ua-model")),
-		SecCHDeviceMemory:      truncatePointerValue(SecCHDeviceMemory, r.Header.Get("sec-ch-device-memory")),
-		ServerHostname:         truncateValue(ServerHostname, r.Host),
-		UserAgent:              truncateValue(UserAgent, r.Header.Get("user-agent")),
-		XForwardedForIP:        truncateValue(XForwardedForIP, r.Header.Get("x-forwarded-for")),
-		XRealIP:                truncateValue(XRealIP, r.Header.Get("x-real-ip")),
+		SecCHUA:                truncatePointerValue(SecCHUA, useMetadata(r.Header.Get("sec-ch-ua"), rm.SecCHUA)),
+		SecCHUAMobile:          truncatePointerValue(SecCHUAMobile, useMetadata(r.Header.Get("sec-ch-ua-mobile"), rm.SecCHUAMobile)),
+		SecCHUAPlatform:        truncatePointerValue(SecCHUAPlatform, useMetadata(r.Header.Get("sec-ch-ua-platform"), rm.SecCHUAPlatform)),
+		SecCHUAArch:            truncatePointerValue(SecCHUAArch, useMetadata(r.Header.Get("sec-ch-ua-arch"), rm.SecCHUAArch)),
+		SecCHUAFullVersionList: truncatePointerValue(SecCHUAFullVersionList, useMetadata(r.Header.Get("sec-ch-ua-full-version-list"), rm.SecCHUAFullVersionList)),
+		SecCHUAModel:           truncatePointerValue(SecCHUAModel, useMetadata(r.Header.Get("sec-ch-ua-model"), rm.SecCHUAModel)),
+		SecCHDeviceMemory:      truncatePointerValue(SecCHDeviceMemory, useMetadata(r.Header.Get("sec-ch-device-memory"), rm.SecCHDeviceMemory)),
+		ServerHostname:         truncateValue(ServerHostname, useMetadata(r.Host, rm.ServerHostname)),
+		UserAgent:              truncateValue(UserAgent, useMetadata(r.Header.Get("user-agent"), rm.UserAgent)),
+		XForwardedForIP:        truncateValue(XForwardedForIP, useMetadata(r.Header.Get("x-forwarded-for"), rm.XForwardedForIP)),
+		XRealIP:                truncateValue(XRealIP, useMetadata(r.Header.Get("x-real-ip"), rm.XRealIP)),
 	}, nil
 }
 
-// Validate performs a validation request to the DataDome's Account Protect API.
-// This function extracts the information from the incoming request and returns the recommendation from the API.
-// This function has to be called when the [Action] results with a success.
-func (c *Client) Validate(r *http.Request, event Event) (*ResponsePayload, error) {
-	header, err := c.buildHeader(r)
+// validate is the internal function that performs the validation request to the Account Protect API.
+func (c *Client) validate(r *http.Request, event Event, requestMetadata *RequestMetadata) (*ResponsePayload, error) {
+	header, err := c.buildHeader(r, requestMetadata)
 	if err != nil {
 		return nil, fmt.Errorf("fail to extract request fingerprint: %w", err)
 	}
@@ -139,17 +151,52 @@ func (c *Client) Validate(r *http.Request, event Event) (*ResponsePayload, error
 	return event.Validate(c, r, module, header)
 }
 
-// Collect performs an enrichment request to the DataDome's Account Protect API.
-// This function extracts the information of the incoming request to enrich our detection models.
-// This function has to be called when the [Action] results with a failure.
-func (c *Client) Collect(r *http.Request, event Event) (*ErrorResponsePayload, error) {
-	header, err := c.buildHeader(r)
+// Validate performs a validation request to the DataDome's Account Protect API.
+// This function extracts the information from the incoming request to construct the [Header] structure
+// and returns the recommendation from the API.
+func (c *Client) Validate(r *http.Request, event Event) (*ResponsePayload, error) {
+	return c.validate(r, event, &RequestMetadata{})
+}
+
+// ValidateWithRequestMetadata performs a validation request to the DataDome's Account Protect API.
+// This function is similar to the [Validate] function but allows the override of the [Header].
+//
+// If a field of the [RequestMetadata] structure is not specified, it will extracts the information
+// from the incoming request.
+func (c *Client) ValidateWithRequestMetadata(r *http.Request, event Event, requestMetadata *RequestMetadata) (*ResponsePayload, error) {
+	if requestMetadata == nil {
+		requestMetadata = &RequestMetadata{}
+	}
+	return c.validate(r, event, requestMetadata)
+}
+
+// collect is the internal function that performs the enrichment request to the Account Protect API.
+func (c *Client) collect(r *http.Request, event Event, requestMetadata *RequestMetadata) (*ErrorResponsePayload, error) {
+	header, err := c.buildHeader(r, requestMetadata)
 	if err != nil {
 		return nil, fmt.Errorf("fail to extract request fingerprint: %w", err)
 	}
 	module := c.getModule()
 
 	return event.Collect(c, r, module, header)
+}
+
+// Collect performs an enrichment request to the DataDome's Account Protect API.
+// This function extracts the information of the incoming request to enrich our detection models.
+func (c *Client) Collect(r *http.Request, event Event) (*ErrorResponsePayload, error) {
+	return c.collect(r, event, &RequestMetadata{})
+}
+
+// CollectWithRequestMetadata performs an enrichment request to the DataDome's Account Protect API.
+// This function is similar to the [Collect] function but allows the override of the [Header].
+//
+// If a field of the [RequestMetadata] structure is not specified, it will extracts the information
+// from the incoming request.
+func (c *Client) CollectWithRequestMetadata(r *http.Request, event Event, requestMetadata *RequestMetadata) (*ErrorResponsePayload, error) {
+	if requestMetadata == nil {
+		requestMetadata = &RequestMetadata{}
+	}
+	return c.collect(r, event, requestMetadata)
 }
 
 // performRequest performs the appropriate request to the DataDome's Account Protect API.

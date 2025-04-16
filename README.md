@@ -1,2 +1,2 @@
 # fraud-sdk-go
-Account Protect SDK for Go
+Fraud SDK for Go

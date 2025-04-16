@@ -38,13 +38,15 @@ func NewRegistrationEvent(account string, user User, options ...RegistrationEven
 // An error may be returned in case of error when performing the request.
 func (e *RegistrationEvent) Validate(c *Client, r *http.Request, module *Module, header *Header) (*ResponsePayload, error) {
 	requestPayload := &RegistrationRequestPayload{
-		Account: e.Account,
-		Header:  *header,
-		Module:  *module,
+		CommonRequestPayload: CommonRequestPayload{
+			Account: e.Account,
+			Header:  *header,
+			Module:  *module,
+		},
 		Session: e.Session,
 		User:    e.User,
 	}
-	endpoint := fmt.Sprintf("https://%s/v1/validate/registration", c.Endpoint)
+	endpoint := fmt.Sprintf("%s/v1/validate/registration", c.Endpoint)
 	responseStatusCode, responsePayload, err := performRequest(r.Context(), c, endpoint, requestPayload)
 	if err != nil {
 		resp := &ResponsePayload{
@@ -80,13 +82,15 @@ func (e *RegistrationEvent) Validate(c *Client, r *http.Request, module *Module,
 // An error may be returned in case of error when performing the request.
 func (e *RegistrationEvent) Collect(c *Client, r *http.Request, module *Module, header *Header) (*ErrorResponsePayload, error) {
 	requestPayload := &RegistrationRequestPayload{
-		Account: e.Account,
-		Header:  *header,
-		Module:  *module,
+		CommonRequestPayload: CommonRequestPayload{
+			Account: e.Account,
+			Header:  *header,
+			Module:  *module,
+		},
 		Session: e.Session,
 		User:    e.User,
 	}
-	endpoint := fmt.Sprintf("https://%s/v1/collect/registration", c.Endpoint)
+	endpoint := fmt.Sprintf("%s/v1/collect/registration", c.Endpoint)
 	responseStatusCode, responsePayload, err := performRequest(r.Context(), c, endpoint, requestPayload)
 	if err != nil {
 		return nil, fmt.Errorf("fail to collect registration request: %w", err)

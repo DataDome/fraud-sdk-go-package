@@ -3,12 +3,13 @@ package fraudsdkgo
 import (
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
+// ApiFields describes the fields expected for the [AllowedRequestPayload]
 type ApiFields string
 
-// ApiFields describes the fields expected for the [AllowedRequestPayload]
 const (
 	Accept                 ApiFields = "Accept"
 	AcceptCharset          ApiFields = "AcceptCharset"
@@ -142,13 +143,26 @@ func getURL(r *http.Request) string {
 }
 
 // getPort returns the port requested
-func getPort(r *http.Request) string {
+func getPort(r *http.Request) int {
 	if r.Host == "" {
-		return ""
+		return -1
 	}
-	_, port, err := net.SplitHostPort(r.Host)
+	_, stringPort, err := net.SplitHostPort(r.Host)
 	if err != nil {
-		return ""
+		return -1
+	}
+	port, err := strconv.Atoi(stringPort)
+	if err != nil {
+		return -1
 	}
 	return port
+}
+
+// useMetadata returns the value of val2 if not nil.
+// It returns val1 otherwise.
+func useMetadata[T comparable](val1 T, val2 *T) T {
+	if val2 != nil {
+		return *val2
+	}
+	return val1
 }
