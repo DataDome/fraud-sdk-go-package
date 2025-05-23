@@ -1,5 +1,9 @@
 # DataDome Fraud SDK Go
 
+## v1.1.1 (2025-05-23)
+
+- Fix the case of the `XForwardedForIP` in the JSON payload to the Account Protect API
+
 ## v1.1.0 (2025-04-16)
 
 - Add support for [account update](https://docs.datadome.co/docs/account-protect-account-update) events

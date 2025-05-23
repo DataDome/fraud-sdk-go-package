@@ -114,7 +114,7 @@ const (
 	DefaultEndpointValue      string = "https://account-api.datadome.co"
 	DefaultTimeoutValue       int    = 1500
 	defaultModuleNameValue    string = "Fraud SDK Go"
-	defaultModuleVersionValue string = "1.1.0"
+	defaultModuleVersionValue string = "1.1.1"
 )
 
 // Header is used to store the information from the incoming request.
@@ -144,7 +144,7 @@ type Header struct {
 	SecCHDeviceMemory      *string `json:"secCHDeviceMemory,omitempty"`
 	ServerHostname         string  `json:"serverHostname"`
 	UserAgent              string  `json:"userAgent"`
-	XForwardedForIP        string  `json:"xForwardedForIP"`
+	XForwardedForIP        string  `json:"xForwardedForIp"`
 	XRealIP                string  `json:"xRealIP"`
 }
 
