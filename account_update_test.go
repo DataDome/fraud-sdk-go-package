@@ -7,6 +7,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestAccountUpdateWithAuthentication(t *testing.T) {
+	authenticationMode := Password
+	authenticationSocialProvider := Google
+	authenticationType := Social
+	authentication := Authentication{
+		Mode:           &authenticationMode,
+		SocialProvider: &authenticationSocialProvider,
+		Type:           &authenticationType,
+	}
+
+	event := NewAccountUpdateEvent("test-account", AccountUpdateWithAuthentication(authentication))
+	assert.NotNil(t, event)
+	assert.NotNil(t, event.Authentication)
+	assert.Equal(t, authenticationMode, *event.Authentication.Mode)
+	assert.Equal(t, authenticationSocialProvider, *event.Authentication.SocialProvider)
+	assert.Equal(t, authenticationType, *event.Authentication.Type)
+}
+
 func TestAccountUpdateWithSession(t *testing.T) {
 	sessionID := "123456"
 	createdAt := "1970-01-01T00:00:00Z"
@@ -82,6 +100,26 @@ func TestNewAccountUpdateEvent(t *testing.T) {
 	event := NewAccountUpdateEvent("test-account")
 	assert.NotNil(t, event)
 	assert.Equal(t, "test-account", event.Account)
+}
+
+func ExampleAccountUpdateWithAuthentication() {
+	authenticationMode := Password
+	authenticationSocialProvider := Google
+	authenticationType := Social
+	authentication := Authentication{
+		Mode:           &authenticationMode,
+		SocialProvider: &authenticationSocialProvider,
+		Type:           &authenticationType,
+	}
+	event := NewAccountUpdateEvent("test-account", AccountUpdateWithAuthentication(authentication))
+
+	fmt.Println(*event.Authentication.Mode)
+	fmt.Println(*event.Authentication.SocialProvider)
+	fmt.Println(*event.Authentication.Type)
+	// Output:
+	// password
+	// google
+	// social
 }
 
 func ExampleAccountUpdateWithSession() {

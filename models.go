@@ -114,7 +114,7 @@ const (
 	DefaultEndpointValue      string = "https://account-api.datadome.co"
 	DefaultTimeoutValue       int    = 1500
 	defaultModuleNameValue    string = "Fraud SDK Go"
-	defaultModuleVersionValue string = "1.1.1"
+	defaultModuleVersionValue string = "1.2.0"
 )
 
 // Header is used to store the information from the incoming request.
@@ -219,19 +219,19 @@ type Authentication struct {
 
 // User is used to store the information of a user.
 type User struct {
-	ID             string          `json:"id"`
-	Address        *Address        `json:"address,omitempty"`
-	Authentication *Authentication `json:"authentication,omitempty"`
-	CreatedAt      *string         `json:"createdAt,omitempty"`
-	DisplayName    *string         `json:"displayName,omitempty"`
-	Description    *string         `json:"description,omitempty"`
-	Email          *string         `json:"email,omitempty"`
-	ExternalURLs   *[]string       `json:"externalUrls,omitempty"`
-	FirstName      *string         `json:"firstName,omitempty"`
-	LastName       *string         `json:"lastName,omitempty"`
-	Phone          *string         `json:"phone,omitempty"`
-	PictureURLs    *[]string       `json:"pictureUrls,omitempty"`
-	Title          *string         `json:"title,omitempty"`
+	ID                   string    `json:"id"`
+	Address              *Address  `json:"address,omitempty"`
+	CreatedAt            *string   `json:"createdAt,omitempty"`
+	DisplayName          *string   `json:"displayName,omitempty"`
+	Description          *string   `json:"description,omitempty"`
+	Email                *string   `json:"email,omitempty"`
+	ExternalURLs         *[]string `json:"externalUrls,omitempty"`
+	FirstName            *string   `json:"firstName,omitempty"`
+	LastName             *string   `json:"lastName,omitempty"`
+	PaymentMethodUpdated *bool     `json:"paymentMethodUpdated,omitempty"`
+	Phone                *string   `json:"phone,omitempty"`
+	PictureURLs          *[]string `json:"pictureUrls,omitempty"`
+	Title                *string   `json:"title,omitempty"`
 }
 
 // PasswordUpdateReason describes the possible reasons for updating a password.
@@ -284,32 +284,36 @@ type LoginEvent struct {
 // Account Protect API for a [RegistrationEvent].
 type RegistrationRequestPayload struct {
 	CommonRequestPayload
-	Session *Session `json:"session,omitempty"`
-	User    User     `json:"user"`
+	Authentication *Authentication `json:"authentication,omitempty"`
+	Session        *Session        `json:"session,omitempty"`
+	User           User            `json:"user"`
 }
 
 // RegistrationEvent is used to store the fields for a [Registration] event.
 type RegistrationEvent struct {
-	Account string
-	Action  Action
-	Session *Session
-	User    User
+	Account        string
+	Action         Action
+	Authentication *Authentication
+	Session        *Session
+	User           User
 }
 
 // AccountUpdateEvent is used to store the fields for a [AccountUpdate] event.
 type AccountUpdateEvent struct {
-	Account string
-	Action  Action
-	Session *Session
-	User    *User
+	Account        string
+	Action         Action
+	Authentication *Authentication
+	Session        *Session
+	User           *User
 }
 
 // AccountUpdateRequestPayload describes the expected fields of the payload to be sent to the
 // Account Protect API for a [AccountUpdateEvent].
 type AccountUpdateRequestPayload struct {
 	CommonRequestPayload
-	Session *Session `json:"session,omitempty"`
-	User    *User    `json:"user,omitempty"`
+	Authentication *Authentication `json:"authentication,omitempty"`
+	Session        *Session        `json:"session,omitempty"`
+	User           *User           `json:"user,omitempty"`
 }
 
 // PasswordUpdateEvent is used to store the fields for a [PasswordUpdate] event.

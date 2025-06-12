@@ -1,5 +1,12 @@
 # DataDome Fraud SDK Go
 
+## v1.2.0 (2025-06-12)
+
+- Remove `Authentication` field from the `User` structure
+- Add `AccountUpdateWithAuthentication` functional option to set the `Authentication` field for account update events
+- Add `RegistrationWithAuthentication` functional option to set the `Authentication` field for registration events
+- Add `PaymentMethodUpdated` field to the `User` structure for account update events
+
 ## v1.1.1 (2025-05-23)
 
 - Fix the case of the `XForwardedForIP` in the JSON payload to the Account Protect API

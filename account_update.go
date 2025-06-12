@@ -9,6 +9,13 @@ import (
 // AccountUpdateOption describes the functional option signature to customize the [AccountUpdateEvent] behavior.
 type AccountUpdateOption func(*AccountUpdateEvent)
 
+// AccountUpdateWithAuthentication is a functional option to set the [Authentication] field.
+func AccountUpdateWithAuthentication(authentication Authentication) AccountUpdateOption {
+	return func(e *AccountUpdateEvent) {
+		e.Authentication = &authentication
+	}
+}
+
 // AccountUpdateWithSession is a functional option to set the [Session] field.
 func AccountUpdateWithSession(session Session) AccountUpdateOption {
 	return func(e *AccountUpdateEvent) {
@@ -26,10 +33,11 @@ func AccountUpdateWithUser(user User) AccountUpdateOption {
 // NewAccountUpdateEvent instantiates a new [AccountUpdateEvent] that implements the [Event] interface.
 func NewAccountUpdateEvent(account string, options ...AccountUpdateOption) *AccountUpdateEvent {
 	event := &AccountUpdateEvent{
-		Account: account,
-		Action:  AccountUpdate,
-		Session: nil,
-		User:    nil,
+		Account:        account,
+		Action:         AccountUpdate,
+		Authentication: nil,
+		Session:        nil,
+		User:           nil,
 	}
 
 	// apply functional options
@@ -50,8 +58,9 @@ func (e *AccountUpdateEvent) Validate(c *Client, r *http.Request, module *Module
 			Header:  *header,
 			Module:  *module,
 		},
-		Session: e.Session,
-		User:    e.User,
+		Authentication: e.Authentication,
+		Session:        e.Session,
+		User:           e.User,
 	}
 	endpoint := fmt.Sprintf("%s/v1/validate/account/update", c.Endpoint)
 	responseStatusCode, responsePayload, err := performRequest(r.Context(), c, endpoint, requestPayload)
@@ -94,8 +103,9 @@ func (e *AccountUpdateEvent) Collect(c *Client, r *http.Request, module *Module,
 			Header:  *header,
 			Module:  *module,
 		},
-		Session: e.Session,
-		User:    e.User,
+		Authentication: e.Authentication,
+		Session:        e.Session,
+		User:           e.User,
 	}
 	endpoint := fmt.Sprintf("%s/v1/collect/account/update", c.Endpoint)
 	responseStatusCode, responsePayload, err := performRequest(r.Context(), c, endpoint, requestPayload)
