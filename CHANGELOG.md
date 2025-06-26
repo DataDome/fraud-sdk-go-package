@@ -1,5 +1,9 @@
 # DataDome Fraud SDK Go
 
+## v1.2.1 (2025-06-23)
+
+- Fix the case of the `XRealIP` in the JSON payload to the Account Protect API
+
 ## v1.2.0 (2025-06-12)
 
 - Remove `Authentication` field from the `User` structure

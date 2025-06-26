@@ -114,7 +114,7 @@ const (
 	DefaultEndpointValue      string = "https://account-api.datadome.co"
 	DefaultTimeoutValue       int    = 1500
 	defaultModuleNameValue    string = "Fraud SDK Go"
-	defaultModuleVersionValue string = "1.2.0"
+	defaultModuleVersionValue string = "1.2.1"
 )
 
 // Header is used to store the information from the incoming request.
@@ -145,7 +145,7 @@ type Header struct {
 	ServerHostname         string  `json:"serverHostname"`
 	UserAgent              string  `json:"userAgent"`
 	XForwardedForIP        string  `json:"xForwardedForIp"`
-	XRealIP                string  `json:"xRealIP"`
+	XRealIP                string  `json:"xRealIp"`
 }
 
 // RequestMetadata is used to specify the fields of the [Header] structure that need to be override.
