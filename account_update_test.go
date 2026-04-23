@@ -96,6 +96,44 @@ func TestAccountUpdateWithUser(t *testing.T) {
 	assert.Equal(t, userID, event.User.ID)
 }
 
+func TestAccountUpdateWithAccountType(t *testing.T) {
+	event := NewAccountUpdateEvent("test-account", AccountUpdateWithAccountType(CustomerAccountType))
+	assert.NotNil(t, event)
+	assert.NotNil(t, event.AccountType)
+	assert.Equal(t, CustomerAccountType, *event.AccountType)
+}
+
+func TestAccountUpdateWithAccountCreationDate(t *testing.T) {
+	date := "2020-01-01T00:00:00Z"
+	event := NewAccountUpdateEvent("test-account", AccountUpdateWithAccountCreationDate(date))
+	assert.NotNil(t, event)
+	assert.NotNil(t, event.AccountCreationDate)
+	assert.Equal(t, date, *event.AccountCreationDate)
+}
+
+func TestAccountUpdateWithPartnerID(t *testing.T) {
+	partnerID := "partner-123"
+	event := NewAccountUpdateEvent("test-account", AccountUpdateWithPartnerID(partnerID))
+	assert.NotNil(t, event)
+	assert.NotNil(t, event.PartnerID)
+	assert.Equal(t, partnerID, *event.PartnerID)
+}
+
+func TestAccountUpdateWithCustomFields(t *testing.T) {
+	fieldType := StringCustomFieldType
+	isPii := false
+	fields := []CustomField{
+		{Name: "planType", Value: "premium", Type: &fieldType, IsPii: &isPii},
+	}
+
+	event := NewAccountUpdateEvent("test-account", AccountUpdateWithCustomFields(fields))
+	assert.NotNil(t, event)
+	assert.Len(t, event.CustomFields, 1)
+	assert.Equal(t, "planType", event.CustomFields[0].Name)
+	assert.Equal(t, "premium", event.CustomFields[0].Value)
+	assert.Equal(t, StringCustomFieldType, *event.CustomFields[0].Type)
+}
+
 func TestNewAccountUpdateEvent(t *testing.T) {
 	event := NewAccountUpdateEvent("test-account")
 	assert.NotNil(t, event)
@@ -131,6 +169,42 @@ func ExampleAccountUpdateWithSession() {
 
 	fmt.Println(*event.Session.ID)
 	// Output: 123456
+}
+
+func ExampleAccountUpdateWithAccountType() {
+	event := NewAccountUpdateEvent("test-account", AccountUpdateWithAccountType(CustomerAccountType))
+
+	fmt.Println(*event.AccountType)
+	// Output: customer
+}
+
+func ExampleAccountUpdateWithAccountCreationDate() {
+	date := "2020-01-01T00:00:00Z"
+	event := NewAccountUpdateEvent("test-account", AccountUpdateWithAccountCreationDate(date))
+
+	fmt.Println(*event.AccountCreationDate)
+	// Output: 2020-01-01T00:00:00Z
+}
+
+func ExampleAccountUpdateWithPartnerID() {
+	event := NewAccountUpdateEvent("test-account", AccountUpdateWithPartnerID("partner-123"))
+
+	fmt.Println(*event.PartnerID)
+	// Output: partner-123
+}
+
+func ExampleAccountUpdateWithCustomFields() {
+	fieldType := StringCustomFieldType
+	fields := []CustomField{
+		{Name: "planType", Value: "premium", Type: &fieldType},
+	}
+	event := NewAccountUpdateEvent("test-account", AccountUpdateWithCustomFields(fields))
+
+	fmt.Println(event.CustomFields[0].Name)
+	fmt.Println(event.CustomFields[0].Value)
+	// Output:
+	// planType
+	// premium
 }
 
 func ExampleAccountUpdateWithUser() {

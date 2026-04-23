@@ -40,6 +40,51 @@ func TestRegistrationWithSession(t *testing.T) {
 	assert.Equal(t, createdAt, *event.Session.CreatedAt)
 }
 
+func TestRegistrationWithStatus(t *testing.T) {
+	event := NewRegistrationEvent("test-account", User{}, RegistrationWithStatus(RegistrationSucceeded))
+	assert.NotNil(t, event)
+	assert.NotNil(t, event.Status)
+	assert.Equal(t, RegistrationSucceeded, *event.Status)
+}
+
+func TestRegistrationWithFailReason(t *testing.T) {
+	event := NewRegistrationEvent("test-account", User{}, RegistrationWithFailReason(DuplicatedAccount))
+	assert.NotNil(t, event)
+	assert.NotNil(t, event.FailReason)
+	assert.Equal(t, DuplicatedAccount, *event.FailReason)
+}
+
+func TestRegistrationWithAccountType(t *testing.T) {
+	event := NewRegistrationEvent("test-account", User{}, RegistrationWithAccountType(CustomerAccountType))
+	assert.NotNil(t, event)
+	assert.NotNil(t, event.AccountType)
+	assert.Equal(t, CustomerAccountType, *event.AccountType)
+}
+
+func TestRegistrationWithPartnerID(t *testing.T) {
+	partnerID := "partner-123"
+	event := NewRegistrationEvent("test-account", User{}, RegistrationWithPartnerID(partnerID))
+	assert.NotNil(t, event)
+	assert.NotNil(t, event.PartnerID)
+	assert.Equal(t, partnerID, *event.PartnerID)
+}
+
+func TestRegistrationWithCustomFields(t *testing.T) {
+	fieldType := EmailCustomFieldType
+	isPii := true
+	fields := []CustomField{
+		{Name: "referral", Value: "friend@example.com", Type: &fieldType, IsPii: &isPii},
+	}
+
+	event := NewRegistrationEvent("test-account", User{}, RegistrationWithCustomFields(fields))
+	assert.NotNil(t, event)
+	assert.Len(t, event.CustomFields, 1)
+	assert.Equal(t, "referral", event.CustomFields[0].Name)
+	assert.Equal(t, "friend@example.com", event.CustomFields[0].Value)
+	assert.Equal(t, EmailCustomFieldType, *event.CustomFields[0].Type)
+	assert.Equal(t, true, *event.CustomFields[0].IsPii)
+}
+
 func TestNewRegistrationEvent(t *testing.T) {
 	event := NewRegistrationEvent("test-account", User{})
 	assert.NotNil(t, event)
@@ -66,6 +111,48 @@ func ExampleRegistrationWithAuthentication() {
 	// password
 	// google
 	// social
+}
+
+func ExampleRegistrationWithStatus() {
+	event := NewRegistrationEvent("test-account", User{}, RegistrationWithStatus(RegistrationSucceeded))
+
+	fmt.Println(*event.Status)
+	// Output: succeeded
+}
+
+func ExampleRegistrationWithFailReason() {
+	event := NewRegistrationEvent("test-account", User{}, RegistrationWithFailReason(DuplicatedAccount))
+
+	fmt.Println(*event.FailReason)
+	// Output: duplicatedAccount
+}
+
+func ExampleRegistrationWithAccountType() {
+	event := NewRegistrationEvent("test-account", User{}, RegistrationWithAccountType(CustomerAccountType))
+
+	fmt.Println(*event.AccountType)
+	// Output: customer
+}
+
+func ExampleRegistrationWithPartnerID() {
+	event := NewRegistrationEvent("test-account", User{}, RegistrationWithPartnerID("partner-123"))
+
+	fmt.Println(*event.PartnerID)
+	// Output: partner-123
+}
+
+func ExampleRegistrationWithCustomFields() {
+	fieldType := EmailCustomFieldType
+	fields := []CustomField{
+		{Name: "referral", Value: "friend@example.com", Type: &fieldType},
+	}
+	event := NewRegistrationEvent("test-account", User{}, RegistrationWithCustomFields(fields))
+
+	fmt.Println(event.CustomFields[0].Name)
+	fmt.Println(event.CustomFields[0].Value)
+	// Output:
+	// referral
+	// friend@example.com
 }
 
 func ExampleRegistrationWithSession() {

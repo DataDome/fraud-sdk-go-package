@@ -36,30 +36,77 @@ const (
 	XRealIP                ApiFields = "XRealIP"
 )
 
+const (
+	AccountField            ApiFields = "account"
+	AccountTargetField      ApiFields = "accountTarget"
+	AddressCityField        ApiFields = "addressCity"
+	AddressCountryCodeField ApiFields = "addressCountryCode"
+	AddressLine1Field       ApiFields = "addressLine1"
+	AddressLine2Field       ApiFields = "addressLine2"
+	AddressNameField        ApiFields = "addressName"
+	AddressRegionCodeField  ApiFields = "addressRegionCode"
+	AddressZipCodeField     ApiFields = "addressZipCode"
+	ContentField            ApiFields = "content"
+	CustomFieldNameField    ApiFields = "customFieldName"
+	CustomFieldValueField   ApiFields = "customFieldValue"
+	EventNameField          ApiFields = "eventName"
+	PartnerIDField          ApiFields = "partnerId"
+	SessionIDField          ApiFields = "sessionId"
+	UserDescriptionField    ApiFields = "userDescription"
+	UserDisplayNameField    ApiFields = "userDisplayName"
+	UserEmailField          ApiFields = "userEmail"
+	UserFirstNameField      ApiFields = "userFirstName"
+	UserIDField             ApiFields = "userId"
+	UserLastNameField       ApiFields = "userLastName"
+	UserPhoneField          ApiFields = "userPhone"
+	UserURLField            ApiFields = "userUrl"
+)
+
+const (
+	MaxCustomFields = 5  // customFields maxItems
+	MaxURLItems     = 10 // pictureUrls / externalUrls maxItems
+)
+
 // getTruncationSize returns the maximal size allowed for a given [ApiFields]
 func getTruncationSize(key ApiFields) int {
 	switch key {
 	case SecCHDeviceMemory, SecCHUAMobile:
 		return 8
-	case SecCHUAArch:
+	case AddressCountryCodeField:
+		return 2
+	case AddressRegionCodeField, AddressZipCodeField:
+		return 15
+	case SecCHUAArch, UserPhoneField:
 		return 16
+	case EventNameField:
+		return 20
+	case CustomFieldNameField:
+		return 25
 	case SecCHUAPlatform:
 		return 32
+	case UserFirstNameField, UserLastNameField, AddressNameField:
+		return 50
 	case ContentType:
 		return 64
+	case UserDisplayNameField:
+		return 100
 	case ClientID, AcceptCharset, AcceptEncoding, Connection, From, SecCHUA, SecCHUAModel, XRealIP:
 		return 128
-	case AcceptLanguage, SecCHUAFullVersionList:
+	case SessionIDField, AddressLine1Field, AddressLine2Field, AddressCityField:
+		return 255
+	case AcceptLanguage, SecCHUAFullVersionList, CustomFieldValueField:
 		return 256
+	case AccountField, PartnerIDField, AccountTargetField, UserIDField, UserEmailField, UserDescriptionField:
+		return 320
 	case Origin, ServerHostname, Accept, Host:
 		return 512
 	case XForwardedForIP:
 		return -512
 	case UserAgent:
 		return 768
-	case Referer:
+	case Referer, ContentField:
 		return 1024
-	case Request:
+	case Request, UserURLField:
 		return 2048
 	}
 
@@ -86,13 +133,29 @@ func truncateValue(key ApiFields, value string) string {
 
 // truncatePointerValue returns a pointer of the truncated value of the given key.
 // If the value does not need to be truncated, it remains unchanged.
-func truncatePointerValue(key ApiFields, value string) *string {
-	var result *string
-	if value != "" {
-		truncatedValue := truncateValue(key, value)
-		result = &truncatedValue
+// Returns nil if value is nil or points to an empty string.
+func truncatePointerValue(key ApiFields, value *string) *string {
+	if value == nil || *value == "" {
+		return nil
 	}
-	return result
+	truncated := truncateValue(key, *value)
+	return &truncated
+}
+
+// capAndTruncateURLs caps a URL slice to [MaxURLItems] and truncates each URL to [UserURLField] max length.
+func capAndTruncateURLs(urls *[]string) *[]string {
+	if urls == nil {
+		return nil
+	}
+	items := *urls
+	if len(items) > MaxURLItems {
+		items = items[:MaxURLItems]
+	}
+	result := make([]string, len(items))
+	for i, u := range items {
+		result[i] = truncateValue(UserURLField, u)
+	}
+	return &result
 }
 
 // getClientId retrieves the ClientID from the incoming request.

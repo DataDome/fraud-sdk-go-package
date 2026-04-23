@@ -157,10 +157,15 @@ func TestTruncateValue(t *testing.T) {
 }
 
 func TestTruncatePointerValue(t *testing.T) {
-	nilPointer := truncatePointerValue(SecCHUA, "")
+	nilPointer := truncatePointerValue(SecCHUA, nil)
 	assert.Nil(t, nilPointer)
 
-	notNilPointer := truncatePointerValue(SecCHUA, "some_value")
+	empty := ""
+	emptyPointer := truncatePointerValue(SecCHUA, &empty)
+	assert.Nil(t, emptyPointer)
+
+	val := "some_value"
+	notNilPointer := truncatePointerValue(SecCHUA, &val)
 	assert.NotNil(t, notNilPointer)
 	assert.Equal(t, "some_value", *notNilPointer)
 }
@@ -175,4 +180,87 @@ func TestUseMetadata(t *testing.T) {
 	val2 = &tmp
 	result2 := useMetadata(val1, val2)
 	assert.Equal(t, "Bar", result2)
+}
+
+func TestPayloadFieldTruncation(t *testing.T) {
+	long := strings.Repeat("x", 3000)
+	tests := []struct {
+		field ApiFields
+		want  int
+	}{
+		{AddressCountryCodeField, 2},
+		{AddressRegionCodeField, 15},
+		{AddressZipCodeField, 15},
+		{UserPhoneField, 16},
+		{EventNameField, 20},
+		{CustomFieldNameField, 25},
+		{UserFirstNameField, 50},
+		{UserLastNameField, 50},
+		{AddressNameField, 50},
+		{UserDisplayNameField, 100},
+		{SessionIDField, 255},
+		{AddressLine1Field, 255},
+		{AddressLine2Field, 255},
+		{AddressCityField, 255},
+		{CustomFieldValueField, 256},
+		{AccountField, 320},
+		{PartnerIDField, 320},
+		{AccountTargetField, 320},
+		{UserIDField, 320},
+		{UserEmailField, 320},
+		{UserDescriptionField, 320},
+		{ContentField, 1024},
+		{UserURLField, 2048},
+	}
+
+	for _, tc := range tests {
+		got := truncateValue(tc.field, long)
+		assert.Equal(t, tc.want, len(got), "field %s", tc.field)
+	}
+}
+
+func TestTruncatePointerValueTruncates(t *testing.T) {
+	long := strings.Repeat("a", 500)
+	result := truncatePointerValue(AccountField, &long)
+	assert.NotNil(t, result)
+	assert.Equal(t, 320, len(*result))
+}
+
+func TestMaxCustomFieldsCap(t *testing.T) {
+	fieldType := StringCustomFieldType
+	fields := make([]CustomField, MaxCustomFields+3)
+	for i := range fields {
+		fields[i] = CustomField{Name: "field", Value: "value", Type: &fieldType}
+	}
+
+	cappedFields := fields
+	if len(cappedFields) > MaxCustomFields {
+		cappedFields = cappedFields[:MaxCustomFields]
+	}
+	assert.Len(t, cappedFields, MaxCustomFields)
+}
+
+func TestMaxURLItemsCap(t *testing.T) {
+	urls := make([]string, MaxURLItems+5)
+	for i := range urls {
+		urls[i] = "https://example.com/image.png"
+	}
+	result := capAndTruncateURLs(&urls)
+	assert.NotNil(t, result)
+	assert.Len(t, *result, MaxURLItems)
+}
+
+func TestCapAndTruncateURLsNil(t *testing.T) {
+	result := capAndTruncateURLs(nil)
+	assert.Nil(t, result)
+}
+
+func TestCapAndTruncateURLsTruncatesEachURL(t *testing.T) {
+	longURL := strings.Repeat("u", 3000)
+	urls := []string{longURL, "short"}
+	result := capAndTruncateURLs(&urls)
+	assert.NotNil(t, result)
+	assert.Len(t, *result, 2)
+	assert.Equal(t, 2048, len((*result)[0]))
+	assert.Equal(t, "short", (*result)[1])
 }

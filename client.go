@@ -109,6 +109,14 @@ func (c *Client) buildHeader(r *http.Request, rm *RequestMetadata) (*Header, err
 		}
 	}
 
+	secCHUA := useMetadata(r.Header.Get("sec-ch-ua"), rm.SecCHUA)
+	secCHUAMobile := useMetadata(r.Header.Get("sec-ch-ua-mobile"), rm.SecCHUAMobile)
+	secCHUAPlatform := useMetadata(r.Header.Get("sec-ch-ua-platform"), rm.SecCHUAPlatform)
+	secCHUAArch := useMetadata(r.Header.Get("sec-ch-ua-arch"), rm.SecCHUAArch)
+	secCHUAFullVersionList := useMetadata(r.Header.Get("sec-ch-ua-full-version-list"), rm.SecCHUAFullVersionList)
+	secCHUAModel := useMetadata(r.Header.Get("sec-ch-ua-model"), rm.SecCHUAModel)
+	secCHDeviceMemory := useMetadata(r.Header.Get("sec-ch-device-memory"), rm.SecCHDeviceMemory)
+
 	return &Header{
 		Accept:                 truncateValue(Accept, useMetadata(r.Header.Get("accept"), rm.Accept)),
 		AcceptCharset:          truncateValue(AcceptCharset, useMetadata(r.Header.Get("accept-charset"), rm.AcceptCharset)),
@@ -126,13 +134,13 @@ func (c *Client) buildHeader(r *http.Request, rm *RequestMetadata) (*Header, err
 		Origin:                 truncateValue(Origin, useMetadata(r.Header.Get("origin"), rm.Origin)),
 		Port:                   port,
 		Protocol:               proto,
-		SecCHUA:                truncatePointerValue(SecCHUA, useMetadata(r.Header.Get("sec-ch-ua"), rm.SecCHUA)),
-		SecCHUAMobile:          truncatePointerValue(SecCHUAMobile, useMetadata(r.Header.Get("sec-ch-ua-mobile"), rm.SecCHUAMobile)),
-		SecCHUAPlatform:        truncatePointerValue(SecCHUAPlatform, useMetadata(r.Header.Get("sec-ch-ua-platform"), rm.SecCHUAPlatform)),
-		SecCHUAArch:            truncatePointerValue(SecCHUAArch, useMetadata(r.Header.Get("sec-ch-ua-arch"), rm.SecCHUAArch)),
-		SecCHUAFullVersionList: truncatePointerValue(SecCHUAFullVersionList, useMetadata(r.Header.Get("sec-ch-ua-full-version-list"), rm.SecCHUAFullVersionList)),
-		SecCHUAModel:           truncatePointerValue(SecCHUAModel, useMetadata(r.Header.Get("sec-ch-ua-model"), rm.SecCHUAModel)),
-		SecCHDeviceMemory:      truncatePointerValue(SecCHDeviceMemory, useMetadata(r.Header.Get("sec-ch-device-memory"), rm.SecCHDeviceMemory)),
+		SecCHUA:                truncatePointerValue(SecCHUA, &secCHUA),
+		SecCHUAMobile:          truncatePointerValue(SecCHUAMobile, &secCHUAMobile),
+		SecCHUAPlatform:        truncatePointerValue(SecCHUAPlatform, &secCHUAPlatform),
+		SecCHUAArch:            truncatePointerValue(SecCHUAArch, &secCHUAArch),
+		SecCHUAFullVersionList: truncatePointerValue(SecCHUAFullVersionList, &secCHUAFullVersionList),
+		SecCHUAModel:           truncatePointerValue(SecCHUAModel, &secCHUAModel),
+		SecCHDeviceMemory:      truncatePointerValue(SecCHDeviceMemory, &secCHDeviceMemory),
 		ServerHostname:         truncateValue(ServerHostname, useMetadata(r.Host, rm.ServerHostname)),
 		UserAgent:              truncateValue(UserAgent, useMetadata(r.Header.Get("user-agent"), rm.UserAgent)),
 		XForwardedForIP:        truncateValue(XForwardedForIP, useMetadata(r.Header.Get("x-forwarded-for"), rm.XForwardedForIP)),

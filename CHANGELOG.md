@@ -1,5 +1,13 @@
 # DataDome Fraud SDK Go
 
+## v1.3.0 (2026-04-10)
+
+- Add support for [custom events](https://docs.datadome.co/docs/account-protect-custom-events)
+- Add optional `AccountCreationDate`, `PartnerID`, and `CustomFields` fields for every events
+- Add optional `AccountType` field for login, registration, and account update events
+- Add optional `FailReason` field for login and registration events
+- Truncate fields of the events payload
+
 ## v1.2.1 (2025-06-23)
 
 - Fix the case of the `XRealIP` in the JSON payload to the Account Protect API

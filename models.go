@@ -25,7 +25,7 @@ type Event interface {
 // AllowedRequestPayload describes the allowed request payloads to perform a request
 // to the Account Protect API.
 type AllowedRequestPayload interface {
-	LoginRequestPayload | RegistrationRequestPayload | AccountUpdateRequestPayload | PasswordUpdateRequestPayload
+	LoginRequestPayload | RegistrationRequestPayload | AccountUpdateRequestPayload | PasswordUpdateRequestPayload | CustomEventRequestPayload
 }
 
 // Operation describes the available operations related to fraud protection that can be performed.
@@ -34,16 +34,6 @@ type Operation string
 const (
 	ValidateOperation Operation = "validate"
 	CollectOperation  Operation = "collect"
-)
-
-// Action describes the available actions that can be protected.
-type Action string
-
-const (
-	AccountUpdate  Action = "account-update"
-	Login          Action = "login"
-	Registration   Action = "registration"
-	PasswordUpdate Action = "password-update"
 )
 
 // ResponseStatus describes the possible status outcome.
@@ -114,7 +104,7 @@ const (
 	DefaultEndpointValue      string = "https://account-api.datadome.co"
 	DefaultTimeoutValue       int    = 1500
 	defaultModuleNameValue    string = "Fraud SDK Go"
-	defaultModuleVersionValue string = "1.2.1"
+	defaultModuleVersionValue string = "1.3.0"
 )
 
 // Header is used to store the information from the incoming request.
@@ -228,11 +218,93 @@ type User struct {
 	ExternalURLs         *[]string `json:"externalUrls,omitempty"`
 	FirstName            *string   `json:"firstName,omitempty"`
 	LastName             *string   `json:"lastName,omitempty"`
+	DateOfBirth          *string   `json:"dateOfBirth,omitempty"`
 	PaymentMethodUpdated *bool     `json:"paymentMethodUpdated,omitempty"`
 	Phone                *string   `json:"phone,omitempty"`
 	PictureURLs          *[]string `json:"pictureUrls,omitempty"`
 	Title                *string   `json:"title,omitempty"`
 }
+
+// LoginFailReason describes the possible reasons why a login failed.
+type LoginFailReason string
+
+const (
+	UnknownAccount       LoginFailReason = "unknownAccount"
+	WrongPassword        LoginFailReason = "wrongPassword"
+	ExpiredPassword      LoginFailReason = "expiredPassword"
+	DisabledAccount      LoginFailReason = "disabledAccount"
+	BlockedAccount       LoginFailReason = "blockedAccount"
+	InvalidMFALogin      LoginFailReason = "invalidMfa"
+	InternalBusinessRule LoginFailReason = "internalBusinessRule"
+	TechnicalIssue       LoginFailReason = "technicalIssue"
+	OtherLoginFailReason LoginFailReason = "other"
+)
+
+// RegistrationStatus describes the possible status of a registration.
+type RegistrationStatus string
+
+const (
+	RegistrationAttempted RegistrationStatus = "attempted"
+	RegistrationSucceeded RegistrationStatus = "succeeded"
+	RegistrationFailed    RegistrationStatus = "failed"
+)
+
+// RegistrationFailReason describes the possible reasons why a registration failed.
+type RegistrationFailReason string
+
+const (
+	DuplicatedAccount                RegistrationFailReason = "duplicatedAccount"
+	InvalidMFARegistration           RegistrationFailReason = "invalidMfa"
+	Cancelled                        RegistrationFailReason = "cancelled"
+	InternalBusinessRuleRegistration RegistrationFailReason = "internalBusinessRule"
+	TechnicalIssueRegistration       RegistrationFailReason = "technicalIssue"
+	OtherRegistrationFailReason      RegistrationFailReason = "other"
+)
+
+// AccountType describes the type of account to adapt the detection model on the user type.
+type AccountType string
+
+const (
+	GuestAccountType    AccountType = "guest"
+	StaffAccountType    AccountType = "staff"
+	ExternalAccountType AccountType = "external"
+	PartnerAccountType  AccountType = "partner"
+	CustomerAccountType AccountType = "customer"
+	MerchantAccountType AccountType = "merchant"
+	VIPAccountType      AccountType = "vip"
+	TestAccountType     AccountType = "test"
+	OtherAccountType    AccountType = "other"
+)
+
+// CustomFieldType describes the data type of a [CustomField].
+type CustomFieldType string
+
+const (
+	StringCustomFieldType CustomFieldType = "string"
+	PhoneCustomFieldType  CustomFieldType = "phone"
+	EmailCustomFieldType  CustomFieldType = "email"
+	UserIDCustomFieldType CustomFieldType = "userId"
+	NumberCustomFieldType CustomFieldType = "number"
+	IPCustomFieldType     CustomFieldType = "ip"
+)
+
+// CustomField is used to send additional business data fields.
+type CustomField struct {
+	Name  string           `json:"name"`
+	Value string           `json:"value"`
+	Type  *CustomFieldType `json:"type,omitempty"`
+	IsPii *bool            `json:"isPii,omitempty"`
+}
+
+// CustomEventStatus describes the possible status of a custom event.
+type CustomEventStatus string
+
+const (
+	CustomEventAttempted CustomEventStatus = "attempted"
+	CustomEventSucceeded CustomEventStatus = "succeeded"
+	CustomEventFailed    CustomEventStatus = "failed"
+	CustomEventExpired   CustomEventStatus = "expired"
+)
 
 // PasswordUpdateReason describes the possible reasons for updating a password.
 type PasswordUpdateReason string
@@ -255,85 +327,98 @@ const (
 
 // CommonRequestPayload describes the common fields for the event's request payloads.
 type CommonRequestPayload struct {
-	Account string `json:"account"`
-	Header  Header `json:"header"`
-	Module  Module `json:"module"`
+	Account        string          `json:"account"`
+	Authentication *Authentication `json:"authentication,omitempty"`
+	CustomFields   []CustomField   `json:"customFields,omitempty"`
+	Header         Header          `json:"header"`
+	Module         Module          `json:"module"`
+	PartnerID      *string         `json:"partnerId,omitempty"`
+	Session        *Session        `json:"session,omitempty"`
 }
 
 // LoginRequestPayload describes the expected fields of the payload to be sent to the
 // Account Protect API for a [LoginEvent].
 type LoginRequestPayload struct {
 	CommonRequestPayload
-	Status         LoginStatus     `json:"status"`
-	User           *User           `json:"user,omitempty"`
-	Session        *Session        `json:"session,omitempty"`
-	Authentication *Authentication `json:"authentication,omitempty"`
+	AccountCreationDate *string          `json:"accountCreationDate,omitempty"`
+	AccountType         *AccountType     `json:"accountType,omitempty"`
+	FailReason          *LoginFailReason `json:"failReason,omitempty"`
+	Status              LoginStatus      `json:"status"`
+	User                *User            `json:"user,omitempty"`
+}
+
+// CommonEvent describes the common fields for all event types.
+type CommonEvent struct {
+	Account        string
+	Authentication *Authentication
+	CustomFields   []CustomField
+	PartnerID      *string
+	Session        *Session
 }
 
 // LoginEvent is used to store the fields for a [Login] event.
 type LoginEvent struct {
-	Account        string
-	Action         Action
-	Status         LoginStatus
-	User           *User
-	Session        *Session
-	Authentication *Authentication
+	CommonEvent
+	AccountCreationDate *string
+	AccountType         *AccountType
+	FailReason          *LoginFailReason
+	Status              LoginStatus
+	User                *User
 }
 
 // RegistrationRequestPayload describes the expected fields of the payload to be sent to the
 // Account Protect API for a [RegistrationEvent].
 type RegistrationRequestPayload struct {
 	CommonRequestPayload
-	Authentication *Authentication `json:"authentication,omitempty"`
-	Session        *Session        `json:"session,omitempty"`
-	User           User            `json:"user"`
+	AccountType *AccountType            `json:"accountType,omitempty"`
+	FailReason  *RegistrationFailReason `json:"failReason,omitempty"`
+	Status      *RegistrationStatus     `json:"status,omitempty"`
+	User        User                    `json:"user"`
 }
 
 // RegistrationEvent is used to store the fields for a [Registration] event.
 type RegistrationEvent struct {
-	Account        string
-	Action         Action
-	Authentication *Authentication
-	Session        *Session
-	User           User
+	CommonEvent
+	AccountType *AccountType
+	FailReason  *RegistrationFailReason
+	Status      *RegistrationStatus
+	User        User
 }
 
 // AccountUpdateEvent is used to store the fields for a [AccountUpdate] event.
 type AccountUpdateEvent struct {
-	Account        string
-	Action         Action
-	Authentication *Authentication
-	Session        *Session
-	User           *User
+	CommonEvent
+	AccountCreationDate *string
+	AccountType         *AccountType
+	User                *User
 }
 
 // AccountUpdateRequestPayload describes the expected fields of the payload to be sent to the
 // Account Protect API for a [AccountUpdateEvent].
 type AccountUpdateRequestPayload struct {
 	CommonRequestPayload
-	Authentication *Authentication `json:"authentication,omitempty"`
-	Session        *Session        `json:"session,omitempty"`
-	User           *User           `json:"user,omitempty"`
+	AccountCreationDate *string      `json:"accountCreationDate,omitempty"`
+	AccountType         *AccountType `json:"accountType,omitempty"`
+	User                *User        `json:"user,omitempty"`
 }
 
 // PasswordUpdateEvent is used to store the fields for a [PasswordUpdate] event.
 type PasswordUpdateEvent struct {
-	Account string
-	Action  Action
-	Reason  PasswordUpdateReason
-	Status  PasswordUpdateStatus
-	Session *Session
-	User    User
+	CommonEvent
+	AccountCreationDate *string
+	Reason              PasswordUpdateReason
+	Status              PasswordUpdateStatus
+	User                User
 }
 
 // PasswordUpdateRequestPayload describes the expected fields of the payload to be sent to the
 // Account Protect API for a [PasswordUpdateEvent].
 type PasswordUpdateRequestPayload struct {
 	CommonRequestPayload
-	Reason  PasswordUpdateReason `json:"reason"`
-	Session *Session             `json:"session,omitempty"`
-	Status  PasswordUpdateStatus `json:"status"`
-	User    User                 `json:"user"`
+	AccountCreationDate *string              `json:"accountCreationDate,omitempty"`
+	Reason              PasswordUpdateReason `json:"reason"`
+	Status              PasswordUpdateStatus `json:"status"`
+	User                User                 `json:"user"`
 }
 
 // SuccessResponsePayload is used for success response returned by the Account Protect API.
@@ -363,4 +448,38 @@ type ErrorResponsePayload struct {
 type ResponsePayload struct {
 	SuccessResponsePayload
 	ErrorResponsePayload
+}
+
+// CustomEventUser is used to store the information of a user for a [CustomEvent].
+// It extends [User] with an additional authentication status field.
+type CustomEventUser struct {
+	User
+	IsAuthenticated *bool `json:"isAuthenticated,omitempty"`
+}
+
+// CustomEvent is used to store the fields for a custom event.
+type CustomEvent struct {
+	CommonEvent
+	AccountCreationDate *string
+	AccountTarget       *string
+	AccountType         *AccountType
+	Content             *string
+	EventName           string
+	EventStatus         *CustomEventStatus
+	IsEventCritical     *bool
+	User                *CustomEventUser
+}
+
+// CustomEventRequestPayload describes the expected fields of the payload to be sent to the
+// Account Protect API for a [CustomEvent].
+type CustomEventRequestPayload struct {
+	CommonRequestPayload
+	AccountCreationDate *string            `json:"accountCreationDate,omitempty"`
+	AccountTarget       *string            `json:"accountTarget,omitempty"`
+	AccountType         *AccountType       `json:"accountType,omitempty"`
+	Content             *string            `json:"content,omitempty"`
+	EventName           string             `json:"eventName"`
+	EventStatus         *CustomEventStatus `json:"eventStatus,omitempty"`
+	IsEventCritical     *bool              `json:"isEventCritical,omitempty"`
+	User                *CustomEventUser   `json:"user,omitempty"`
 }

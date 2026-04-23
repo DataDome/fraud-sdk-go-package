@@ -19,18 +19,89 @@ func RegistrationWithAuthentication(authentication Authentication) RegistrationE
 // RegistrationWithSession is a functional option to set the [Session] field.
 func RegistrationWithSession(session Session) RegistrationEventOption {
 	return func(e *RegistrationEvent) {
+		session.ID = truncatePointerValue(SessionIDField, session.ID)
 		e.Session = &session
+	}
+}
+
+// RegistrationWithStatus is a functional option to set the [RegistrationStatus] field.
+func RegistrationWithStatus(status RegistrationStatus) RegistrationEventOption {
+	return func(e *RegistrationEvent) {
+		e.Status = &status
+	}
+}
+
+// RegistrationWithFailReason is a functional option to set the [RegistrationFailReason] field.
+func RegistrationWithFailReason(reason RegistrationFailReason) RegistrationEventOption {
+	return func(e *RegistrationEvent) {
+		e.FailReason = &reason
+	}
+}
+
+// RegistrationWithAccountType is a functional option to set the [AccountType] field.
+func RegistrationWithAccountType(accountType AccountType) RegistrationEventOption {
+	return func(e *RegistrationEvent) {
+		e.AccountType = &accountType
+	}
+}
+
+// RegistrationWithPartnerID is a functional option to set the partner ID field.
+func RegistrationWithPartnerID(partnerID string) RegistrationEventOption {
+	return func(e *RegistrationEvent) {
+		truncated := truncateValue(PartnerIDField, partnerID)
+		e.PartnerID = &truncated
+	}
+}
+
+// RegistrationWithCustomFields is a functional option to set the custom fields.
+func RegistrationWithCustomFields(fields []CustomField) RegistrationEventOption {
+	return func(e *RegistrationEvent) {
+		if len(fields) > MaxCustomFields {
+			fields = fields[:MaxCustomFields]
+		}
+		truncatedFields := make([]CustomField, len(fields))
+		for i, f := range fields {
+			truncatedFields[i] = CustomField{
+				Name:  truncateValue(CustomFieldNameField, f.Name),
+				Value: truncateValue(CustomFieldValueField, f.Value),
+				Type:  f.Type,
+				IsPii: f.IsPii,
+			}
+		}
+		e.CustomFields = truncatedFields
 	}
 }
 
 // NewRegistrationEvent instantiates a new [RegistrationEvent] that implements the [Event] interface.
 func NewRegistrationEvent(account string, user User, options ...RegistrationEventOption) *RegistrationEvent {
+	user.ID = truncateValue(UserIDField, user.ID)
+	user.FirstName = truncatePointerValue(UserFirstNameField, user.FirstName)
+	user.LastName = truncatePointerValue(UserLastNameField, user.LastName)
+	user.Phone = truncatePointerValue(UserPhoneField, user.Phone)
+	user.Email = truncatePointerValue(UserEmailField, user.Email)
+	user.DisplayName = truncatePointerValue(UserDisplayNameField, user.DisplayName)
+	user.Description = truncatePointerValue(UserDescriptionField, user.Description)
+	user.PictureURLs = capAndTruncateURLs(user.PictureURLs)
+	user.ExternalURLs = capAndTruncateURLs(user.ExternalURLs)
+	if user.Address != nil {
+		addr := user.Address
+		truncatedAddr := Address{
+			Name:        truncatePointerValue(AddressNameField, addr.Name),
+			Line1:       truncatePointerValue(AddressLine1Field, addr.Line1),
+			Line2:       truncatePointerValue(AddressLine2Field, addr.Line2),
+			City:        truncatePointerValue(AddressCityField, addr.City),
+			CountryCode: truncatePointerValue(AddressCountryCodeField, addr.CountryCode),
+			RegionCode:  truncatePointerValue(AddressRegionCodeField, addr.RegionCode),
+			ZipCode:     truncatePointerValue(AddressZipCodeField, addr.ZipCode),
+		}
+		user.Address = &truncatedAddr
+	}
+
 	event := &RegistrationEvent{
-		Account:        account,
-		Action:         Registration,
-		Authentication: nil,
-		Session:        nil,
-		User:           user,
+		CommonEvent: CommonEvent{
+			Account: truncateValue(AccountField, account),
+		},
+		User: user,
 	}
 
 	// apply functional options
@@ -47,13 +118,18 @@ func NewRegistrationEvent(account string, user User, options ...RegistrationEven
 func (e *RegistrationEvent) Validate(c *Client, r *http.Request, module *Module, header *Header) (*ResponsePayload, error) {
 	requestPayload := &RegistrationRequestPayload{
 		CommonRequestPayload: CommonRequestPayload{
-			Account: e.Account,
-			Header:  *header,
-			Module:  *module,
+			Account:        e.Account,
+			Authentication: e.Authentication,
+			CustomFields:   e.CustomFields,
+			Header:         *header,
+			Module:         *module,
+			PartnerID:      e.PartnerID,
+			Session:        e.Session,
 		},
-		Authentication: e.Authentication,
-		Session:        e.Session,
-		User:           e.User,
+		AccountType: e.AccountType,
+		FailReason:  e.FailReason,
+		Status:      e.Status,
+		User:        e.User,
 	}
 	endpoint := fmt.Sprintf("%s/v1/validate/registration", c.Endpoint)
 	responseStatusCode, responsePayload, err := performRequest(r.Context(), c, endpoint, requestPayload)
@@ -92,13 +168,18 @@ func (e *RegistrationEvent) Validate(c *Client, r *http.Request, module *Module,
 func (e *RegistrationEvent) Collect(c *Client, r *http.Request, module *Module, header *Header) (*ErrorResponsePayload, error) {
 	requestPayload := &RegistrationRequestPayload{
 		CommonRequestPayload: CommonRequestPayload{
-			Account: e.Account,
-			Header:  *header,
-			Module:  *module,
+			Account:        e.Account,
+			Authentication: e.Authentication,
+			CustomFields:   e.CustomFields,
+			Header:         *header,
+			Module:         *module,
+			PartnerID:      e.PartnerID,
+			Session:        e.Session,
 		},
-		Authentication: e.Authentication,
-		Session:        e.Session,
-		User:           e.User,
+		AccountType: e.AccountType,
+		FailReason:  e.FailReason,
+		Status:      e.Status,
+		User:        e.User,
 	}
 	endpoint := fmt.Sprintf("%s/v1/collect/registration", c.Endpoint)
 	responseStatusCode, responsePayload, err := performRequest(r.Context(), c, endpoint, requestPayload)

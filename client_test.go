@@ -31,7 +31,7 @@ func TestNewClient(t *testing.T) {
 
 		assert.Nil(t, c)
 		assert.NotNil(t, err)
-		assert.Equal(t, "FraudAPIKey must be defined", err.Error())
+		assert.Equal(t, "fraudAPIKey must be defined", err.Error())
 	})
 }
 
