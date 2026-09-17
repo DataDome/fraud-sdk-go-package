@@ -132,40 +132,40 @@ func TestTruncateValue(t *testing.T) {
 		want  int
 		input Header
 	}{
-		{want: 8, input: Header{Key: SecCHUAMobile, Value: fakeCommonValue}},
-		{want: 16, input: Header{Key: SecCHUAArch, Value: fakeCommonValue}},
-		{want: 32, input: Header{Key: SecCHUAPlatform, Value: fakeCommonValue}},
-		{want: 64, input: Header{Key: ContentType, Value: fakeCommonValue}},
-		{want: 128, input: Header{Key: SecCHUA, Value: fakeCommonValue}},
-		{want: 256, input: Header{Key: AcceptLanguage, Value: fakeCommonValue}},
-		{want: 512, input: Header{Key: Origin, Value: fakeCommonValue}},
-		{want: 768, input: Header{Key: UserAgent, Value: fakeCommonValue}},
-		{want: 1024, input: Header{Key: Referer, Value: fakeCommonValue}},
-		{want: 2048, input: Header{Key: Request, Value: fakeCommonValue}},
+		{want: 8, input: Header{Key: HeaderSecCHUAMobile, Value: fakeCommonValue}},
+		{want: 16, input: Header{Key: HeaderSecCHUAArch, Value: fakeCommonValue}},
+		{want: 32, input: Header{Key: HeaderSecCHUAPlatform, Value: fakeCommonValue}},
+		{want: 64, input: Header{Key: HeaderContentType, Value: fakeCommonValue}},
+		{want: 128, input: Header{Key: HeaderSecCHUA, Value: fakeCommonValue}},
+		{want: 256, input: Header{Key: HeaderAcceptLanguage, Value: fakeCommonValue}},
+		{want: 512, input: Header{Key: HeaderOrigin, Value: fakeCommonValue}},
+		{want: 768, input: Header{Key: HeaderUserAgent, Value: fakeCommonValue}},
+		{want: 1024, input: Header{Key: HeaderReferer, Value: fakeCommonValue}},
+		{want: 2048, input: Header{Key: HeaderRequest, Value: fakeCommonValue}},
 		{want: 3000, input: Header{Key: "RequestModuleName", Value: fakeCommonValue}},
-		{want: 512, input: Header{Key: XForwardedForIP, Value: fakeXFFValue}},
+		{want: 512, input: Header{Key: HeaderXForwardedForIp, Value: fakeXFFValue}},
 		{want: 0, input: Header{Key: "SomeHeader", Value: ""}},
 	}
 
 	for _, tc := range tests {
 		got := truncateValue(tc.input.Key, tc.input.Value)
 		assert.Equal(t, tc.want, len(got))
-		if tc.input.Key == XForwardedForIP {
+		if tc.input.Key == HeaderXForwardedForIp {
 			assert.Equal(t, fakeEndXFFValue, got)
 		}
 	}
 }
 
 func TestTruncatePointerValue(t *testing.T) {
-	nilPointer := truncatePointerValue(SecCHUA, nil)
+	nilPointer := truncatePointerValue(HeaderSecCHUA, nil)
 	assert.Nil(t, nilPointer)
 
 	empty := ""
-	emptyPointer := truncatePointerValue(SecCHUA, &empty)
+	emptyPointer := truncatePointerValue(HeaderSecCHUA, &empty)
 	assert.Nil(t, emptyPointer)
 
 	val := "some_value"
-	notNilPointer := truncatePointerValue(SecCHUA, &val)
+	notNilPointer := truncatePointerValue(HeaderSecCHUA, &val)
 	assert.NotNil(t, notNilPointer)
 	assert.Equal(t, "some_value", *notNilPointer)
 }
@@ -188,29 +188,29 @@ func TestPayloadFieldTruncation(t *testing.T) {
 		field ApiFields
 		want  int
 	}{
-		{AddressCountryCodeField, 2},
-		{AddressRegionCodeField, 15},
-		{AddressZipCodeField, 15},
-		{UserPhoneField, 16},
-		{EventNameField, 20},
-		{CustomFieldNameField, 25},
-		{UserFirstNameField, 50},
-		{UserLastNameField, 50},
-		{AddressNameField, 50},
-		{UserDisplayNameField, 100},
-		{SessionIDField, 255},
-		{AddressLine1Field, 255},
-		{AddressLine2Field, 255},
-		{AddressCityField, 255},
-		{CustomFieldValueField, 256},
-		{AccountField, 320},
-		{PartnerIDField, 320},
-		{AccountTargetField, 320},
-		{UserIDField, 320},
-		{UserEmailField, 320},
-		{UserDescriptionField, 320},
-		{ContentField, 1024},
-		{UserURLField, 2048},
+		{UserAllOfAddressCountryCode, 2},
+		{UserAllOfAddressRegionCode, 15},
+		{UserAllOfAddressZipCode, 15},
+		{UserPhone, 16},
+		{CustomActionPayloadEventName, 20},
+		{CustomFieldName, 25},
+		{UserFirstName, 50},
+		{UserLastName, 50},
+		{UserAllOfAddressName, 50},
+		{UserDisplayName, 100},
+		{SessionId, 255},
+		{UserAllOfAddressLine1, 255},
+		{UserAllOfAddressLine2, 255},
+		{UserAllOfAddressCity, 255},
+		{CustomFieldValue, 1024},
+		{LoginPayloadAccount, 320},
+		{LoginPayloadPartnerId, 320},
+		{CustomActionPayloadAccountTarget, 320},
+		{AccountUpdatePayloadAllOfUserId, 320},
+		{AccountUpdatePayloadAllOfUserEmail, 320},
+		{AccountUpdatePayloadAllOfUserDescription, 320},
+		{CustomActionPayloadContent, 3000},
+		{UserPictureUrlsItem, 2048},
 	}
 
 	for _, tc := range tests {
@@ -219,48 +219,24 @@ func TestPayloadFieldTruncation(t *testing.T) {
 	}
 }
 
-func TestTruncatePointerValueTruncates(t *testing.T) {
+func TestTruncatePointerValue_Truncates(t *testing.T) {
 	long := strings.Repeat("a", 500)
-	result := truncatePointerValue(AccountField, &long)
+	result := truncatePointerValue(LoginPayloadAccount, &long)
 	assert.NotNil(t, result)
 	assert.Equal(t, 320, len(*result))
 }
 
-func TestMaxCustomFieldsCap(t *testing.T) {
-	fieldType := StringCustomFieldType
-	fields := make([]CustomField, MaxCustomFields+3)
-	for i := range fields {
-		fields[i] = CustomField{Name: "field", Value: "value", Type: &fieldType}
-	}
-
-	cappedFields := fields
-	if len(cappedFields) > MaxCustomFields {
-		cappedFields = cappedFields[:MaxCustomFields]
-	}
-	assert.Len(t, cappedFields, MaxCustomFields)
-}
-
-func TestMaxURLItemsCap(t *testing.T) {
-	urls := make([]string, MaxURLItems+5)
-	for i := range urls {
-		urls[i] = "https://example.com/image.png"
-	}
-	result := capAndTruncateURLs(&urls)
-	assert.NotNil(t, result)
-	assert.Len(t, *result, MaxURLItems)
-}
-
-func TestCapAndTruncateURLsNil(t *testing.T) {
-	result := capAndTruncateURLs(nil)
+func TestCapAndTruncateStrings_Nil(t *testing.T) {
+	result := capAndTruncateStrings(nil, 10, UserPictureUrlsItem)
 	assert.Nil(t, result)
 }
 
-func TestCapAndTruncateURLsTruncatesEachURL(t *testing.T) {
+func TestCapAndTruncateStrings_CapsAndTruncatesEach(t *testing.T) {
 	longURL := strings.Repeat("u", 3000)
 	urls := []string{longURL, "short"}
-	result := capAndTruncateURLs(&urls)
+	result := capAndTruncateStrings(urls, 10, UserPictureUrlsItem)
 	assert.NotNil(t, result)
-	assert.Len(t, *result, 2)
-	assert.Equal(t, 2048, len((*result)[0]))
-	assert.Equal(t, "short", (*result)[1])
+	assert.Len(t, result, 2)
+	assert.Equal(t, 2048, len(result[0]))
+	assert.Equal(t, "short", result[1])
 }

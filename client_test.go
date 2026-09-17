@@ -1,7 +1,6 @@
 package fraudsdkgo
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -72,7 +71,7 @@ func TestGetHeader_OnlyRequiredValues(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, c)
 
-	header, err := c.buildHeader(request, &RequestMetadata{})
+	header, err := buildHeader(request, &RequestMetadata{})
 
 	assert.Nil(t, err)
 
@@ -95,8 +94,8 @@ func TestGetHeader_OnlyRequiredValues(t *testing.T) {
 	assert.Equal(t, "http", header.Protocol)
 	assert.Equal(t, "www.example.com", header.ServerHostname)
 	assert.Equal(t, "über cool mozilla", header.UserAgent)
-	assert.Equal(t, "192.168.10.10, 127.0.0.1", header.XForwardedForIP)
-	assert.Equal(t, "127.0.0.1", header.XRealIP)
+	assert.Equal(t, "192.168.10.10, 127.0.0.1", header.XForwardedForIp)
+	assert.Equal(t, "127.0.0.1", header.XRealIp)
 
 	// optional fields
 	assert.Nil(t, header.SecCHUA)
@@ -125,7 +124,7 @@ func TestGetHeader_WithOptionalValues(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, c)
 
-	header, err := c.buildHeader(request, &RequestMetadata{})
+	header, err := buildHeader(request, &RequestMetadata{})
 
 	assert.Nil(t, err)
 
@@ -148,8 +147,8 @@ func TestGetHeader_WithOptionalValues(t *testing.T) {
 	assert.Equal(t, "http", header.Protocol)
 	assert.Equal(t, "www.example.com", header.ServerHostname)
 	assert.Equal(t, "über cool mozilla", header.UserAgent)
-	assert.Equal(t, "192.168.10.10, 127.0.0.1", header.XForwardedForIP)
-	assert.Equal(t, "127.0.0.1", header.XRealIP)
+	assert.Equal(t, "192.168.10.10, 127.0.0.1", header.XForwardedForIp)
+	assert.Equal(t, "127.0.0.1", header.XRealIp)
 
 	// optional fields
 	assert.NotNil(t, header.SecCHUA)
@@ -181,7 +180,7 @@ func TestGetHeader_OverrideInitialValues(t *testing.T) {
 	acceptLanguage := "en"
 	addr := "192.168.1.1"
 	proto := "grpc"
-	header, err := c.buildHeader(request, &RequestMetadata{
+	header, err := buildHeader(request, &RequestMetadata{
 		Accept:         &accept,
 		AcceptCharset:  &acceptCharset,
 		AcceptEncoding: &acceptEncoding,
@@ -212,105 +211,6 @@ func TestGetModule(t *testing.T) {
 	assert.Equal(t, defaultModuleVersionValue, module.Version)
 	timeString := strconv.Itoa(int(module.RequestTimeMicros))
 	assert.Len(t, timeString, 16)
-}
-
-type MockEvent struct {
-	ValidateFunc func(c *Client, r *http.Request, module *Module, header *Header) (*ResponsePayload, error)
-	CollectFunc  func(c *Client, r *http.Request, module *Module, header *Header) (*ErrorResponsePayload, error)
-}
-
-func (m *MockEvent) Validate(c *Client, r *http.Request, module *Module, header *Header) (*ResponsePayload, error) {
-	if m.ValidateFunc != nil {
-		return m.ValidateFunc(c, r, module, header)
-	}
-	return nil, errors.New("Validate function not implemented")
-}
-
-func (m *MockEvent) Collect(c *Client, r *http.Request, module *Module, header *Header) (*ErrorResponsePayload, error) {
-	if m.CollectFunc != nil {
-		return m.CollectFunc(c, r, module, header)
-	}
-	return nil, errors.New("Collect function not implemented")
-}
-
-func TestValidate(t *testing.T) {
-	request := setupRequest()
-	c, err := NewClient("your-fraud-api-key")
-
-	assert.Nil(t, err)
-	assert.NotNil(t, c)
-
-	mockEvent := &MockEvent{
-		ValidateFunc: func(c *Client, r *http.Request, module *Module, header *Header) (*ResponsePayload, error) {
-			return &ResponsePayload{
-				SuccessResponsePayload: SuccessResponsePayload{
-					Action: Allow,
-				},
-			}, nil
-		},
-	}
-
-	resp, err := c.Validate(request, mockEvent)
-	assert.Nil(t, err)
-	assert.NotNil(t, resp)
-	assert.Equal(t, Allow, resp.Action)
-}
-
-func TestValidateWithRequestMetadata(t *testing.T) {
-	request := setupRequest()
-	c, err := NewClient("your-fraud-api-key")
-
-	assert.Nil(t, err)
-	assert.NotNil(t, c)
-
-	mockEvent := &MockEvent{
-		ValidateFunc: func(c *Client, r *http.Request, module *Module, header *Header) (*ResponsePayload, error) {
-			return &ResponsePayload{
-				SuccessResponsePayload: SuccessResponsePayload{
-					Action: Allow,
-				},
-			}, nil
-		},
-	}
-
-	resp, err := c.ValidateWithRequestMetadata(request, mockEvent, nil)
-	assert.Nil(t, err)
-	assert.NotNil(t, resp)
-	assert.Equal(t, Allow, resp.Action)
-}
-
-func TestCollect(t *testing.T) {
-	request := setupRequest()
-	c, err := NewClient("your-fraud-api-key")
-
-	assert.Nil(t, err)
-	assert.NotNil(t, c)
-
-	mockEvent := &MockEvent{
-		CollectFunc: func(c *Client, r *http.Request, module *Module, header *Header) (*ErrorResponsePayload, error) {
-			return nil, nil
-		},
-	}
-
-	_, err = c.Collect(request, mockEvent)
-	assert.Nil(t, err)
-}
-
-func TestCollectWithRequestMetadata(t *testing.T) {
-	request := setupRequest()
-	c, err := NewClient("your-fraud-api-key")
-
-	assert.Nil(t, err)
-	assert.NotNil(t, c)
-
-	mockEvent := &MockEvent{
-		CollectFunc: func(c *Client, r *http.Request, module *Module, header *Header) (*ErrorResponsePayload, error) {
-			return nil, nil
-		},
-	}
-
-	_, err = c.CollectWithRequestMetadata(request, mockEvent, nil)
-	assert.Nil(t, err)
 }
 
 func TestWithEndpoint(t *testing.T) {

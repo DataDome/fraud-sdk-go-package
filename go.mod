@@ -1,4 +1,4 @@
-module github.com/datadome/fraud-sdk-go-package
+module github.com/datadome/fraud-sdk-go-package/v2
 
 go 1.18
 

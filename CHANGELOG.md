@@ -1,5 +1,23 @@
 # DataDome Fraud SDK Go
 
+## v2.0.0 (2026-09-14)
+
+### Breaking changes
+
+- Refactor the SDK as a client generated from the Account Protect OpenAPI specification, replacing the previous hand-written implementation
+- Update the module path from `github.com/datadome/fraud-sdk-go` to `github.com/datadome/fraud-sdk-go/v2`
+- Update event submission to one dedicated struct per operation (e.g. `ValidateLogin`, `CollectCustom`, `Feedback`) instead of the `Event` interface and the `Client.Validate`/`Client.Collect` methods
+- Update payload construction to functional options passed to per-operation constructors (e.g. `NewValidateLogin(account, status, opts...)`) instead of the previous per-event builders
+- Update payload validation to run at construction time and fail on missing required fields instead of being silently accepted
+- Update request execution to a `PerformOperation(ctx, client, request, requestMetadata)` method on each operation, now requiring an explicit `context.Context`, replacing `Validate`, `ValidateWithRequestMetadata`, `Collect`, and `CollectWithRequestMetadata`
+- Update error handling so collect and feedback calls return a Go `error` (including the new `HTTPError` type and decoded API errors) instead of an `ErrorResponsePayload` with a `Status` field, while validate calls still fail open and return an `allow` action
+- Rename `ResponsePayload`, `SuccessResponsePayload`, and `ErrorResponsePayload` to `Response`, `ResponseLogin`, and `Error`, remove the `Status` field, and uppercase the `ResponseAction` constants (`Allow` -> `ALLOW`, `Deny` -> `DENY`, `Review` -> `REVIEW`, `Challenge` -> `CHALLENGE`)
+- Rename `LoginStatus` to `LoginPayloadStatus` and its `Failed`/`Succeeded` constants to `LoginPayloadStatusFailed`/`LoginPayloadStatusSucceeded`
+
+### Other changes
+
+- Add support for the feedback endpoint with `NewFeedback`
+
 ## v1.3.0 (2026-04-10)
 
 - Add support for [custom events](https://docs.datadome.co/docs/account-protect-custom-events)
