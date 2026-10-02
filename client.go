@@ -17,7 +17,7 @@ const (
 	DefaultEndpointValue      string = "https://account-api.datadome.co"
 	DefaultTimeoutValue       int    = 1500
 	defaultModuleNameValue    string = "Fraud SDK Go"
-	defaultModuleVersionValue string = "2.0.0"
+	defaultModuleVersionValue string = "2.1.0"
 )
 
 // Client is used to interact with the DataDome's Account Protect API.

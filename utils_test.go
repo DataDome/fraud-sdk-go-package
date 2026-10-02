@@ -183,7 +183,7 @@ func TestUseMetadata(t *testing.T) {
 }
 
 func TestPayloadFieldTruncation(t *testing.T) {
-	long := strings.Repeat("x", 3000)
+	long := strings.Repeat("x", 30000)
 	tests := []struct {
 		field ApiFields
 		want  int
@@ -209,7 +209,7 @@ func TestPayloadFieldTruncation(t *testing.T) {
 		{AccountUpdatePayloadAllOfUserId, 320},
 		{AccountUpdatePayloadAllOfUserEmail, 320},
 		{AccountUpdatePayloadAllOfUserDescription, 320},
-		{CustomActionPayloadContent, 3000},
+		{CustomActionPayloadContent, 24544},
 		{UserPictureUrlsItem, 2048},
 	}
 

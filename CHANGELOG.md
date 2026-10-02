@@ -1,5 +1,9 @@
 # DataDome Fraud SDK Go
 
+## v2.1.0 (2026-10-02)
+
+- Add the optional `eventDate` field as the effective event time in payload
+
 ## v2.0.0 (2026-09-14)
 
 ### Breaking changes
